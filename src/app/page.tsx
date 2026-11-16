@@ -91,16 +91,21 @@ export default function ChatPage() {
     setMessages((ms) => [...ms, userMsg, { id: aId, role: "assistant", parts: [], done: false }]);
 
     try {
-      let fileIds: string[] = [];
+      const fileIds: string[] = [];
       if (files.length) {
-        const fd = new FormData();
-        files.forEach((f) => fd.append("files", f));
-        const up = await fetch(`/api/sessions/${sessionId}/files`, { method: "POST", body: fd });
-        checkAuth(up);
-        const uj = await up.json();
-        if (!up.ok) throw new Error(uj.error ?? "Upload failed");
-        fileIds = uj.files.map((f: { id: string }) => f.id);
-        if (uj.rejected?.length) setNotice(`Not uploaded (unsupported or over 25 MB): ${uj.rejected.join(", ")}`);
+        // One file per request keeps each request small for hosting proxies.
+        const rejected: string[] = [];
+        for (const f of files) {
+          const fd = new FormData();
+          fd.append("files", f);
+          const up = await fetch(`/api/sessions/${sessionId}/files`, { method: "POST", body: fd });
+          checkAuth(up);
+          const uj = await up.json().catch(() => ({ error: `Upload of ${f.name} failed (HTTP ${up.status}).` }));
+          if (!up.ok) throw new Error(uj.error ?? `Upload of ${f.name} failed.`);
+          fileIds.push(...uj.files.map((x: { id: string }) => x.id));
+          rejected.push(...(uj.rejected ?? []));
+        }
+        if (rejected.length) setNotice(`Not uploaded (unsupported or over 25 MB): ${rejected.join(", ")}`);
       }
 
       const res = await fetch(`/api/sessions/${sessionId}/chat`, {

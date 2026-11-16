@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { isAuthed } from "@/lib/auth";
 import { saveUpload, store } from "@/lib/store";
 
 const ALLOWED = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const MAX_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAuthed(req))) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const { id } = await params;
   if (!store.sessions.has(id)) return NextResponse.json({ error: "Session not found — please start a new chat." }, { status: 404 });
 

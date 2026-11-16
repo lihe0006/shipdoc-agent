@@ -16,6 +16,18 @@ export async function authToken(): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** True when the request carries a valid sign-in cookie (or the gate is off). */
+export async function isAuthed(req: Request): Promise<boolean> {
+  if (!authEnabled()) return true;
+  const cookie = req.headers
+    .get("cookie")
+    ?.split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${AUTH_COOKIE}=`))
+    ?.slice(AUTH_COOKIE.length + 1);
+  return !!cookie && safeEqual(decodeURIComponent(cookie), await authToken());
+}
+
 /** Constant-time string comparison. */
 export function safeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
