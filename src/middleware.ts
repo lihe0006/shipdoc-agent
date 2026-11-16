@@ -19,8 +19,8 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   runtime: "nodejs",
-  // The upload route is excluded: running middleware on large multipart bodies
+  // The upload and locate routes are excluded: running middleware on large multipart bodies
   // breaks req.formData() ("body object should not be disturbed or locked").
-  // That route checks the sign-in cookie itself.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/sessions/[^/]+/files).*)"],
+  // Those routes check the sign-in cookie themselves.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/sessions/[^/]+/files|api/locate).*)"],
 };

@@ -6,10 +6,12 @@ import type { ComparisonResult, Status } from "@/lib/schemas";
 import type { Report } from "@/lib/store";
 import { DOC_TYPE_LABEL, DOC_TYPE_SHORT, type DocType } from "@/lib/fields";
 import { STATUS_LABEL } from "@/lib/ui";
+import EvidencePanel, { type Evidence } from "@/components/EvidencePanel";
 import s from "./report.module.css";
 
 type ReportDTO = Report & { counts: Record<Status, number> };
 type Tab = "fields" | "lines" | "checks";
+type Pick = { kind: "field" | "line"; idx: number; focusRef?: string; n: number };
 type Source = { fileId: string; docRef: string; page: number | null; quote: string | null; value: string; field: string };
 
 const FILTERS: (Status | "all")[] = ["all", "mismatch", "minor", "missing", "match", "single_source"];
@@ -23,6 +25,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const [q, setQ] = useState("");
   const [source, setSource] = useState<Source | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [pick, setPick] = useState<Pick | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/reports/${id}`, { cache: "no-store" });
@@ -76,8 +79,20 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
   const openSource = (docRef: string, page: number | null, quote: string | null, value: string, field: string) => {
     const d = docByRef[docRef];
-    if (d) setSource({ fileId: d.fileId, docRef, page, quote, value, field });
+    if (d) {
+      setPick(null);
+      setSource({ fileId: d.fileId, docRef, page, quote, value, field });
+    }
   };
+  const openField = (idx: number, focusRef?: string) => {
+    setSource(null);
+    setPick((p) => ({ kind: "field", idx, focusRef, n: (p?.n ?? 0) + 1 }));
+  };
+  const openLine = (idx: number, focusRef?: string) => {
+    setSource(null);
+    setPick((p) => ({ kind: "line", idx, focusRef, n: (p?.n ?? 0) + 1 }));
+  };
+  const evidence = pick ? buildEvidence(report, pick, st) : null;
 
   return (
     <div className={s.app}>
@@ -160,11 +175,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         <div className={s.tableWrap}>
           <div className={tab === "fields" ? "" : s.hiddenScreen}>
             <h2 className={s.printTitle}>Data fields</h2>
-            <FieldsTable report={report} r={r} st={st} filter={filter} q={q} openSource={openSource} override={override} />
+            <FieldsTable report={report} r={r} st={st} filter={filter} q={q} open={openField} selected={pick?.kind === "field" ? pick.idx : null} override={override} />
           </div>
           <div className={tab === "lines" ? "" : s.hiddenScreen}>
             <h2 className={s.printTitle}>Line items</h2>
-            <LinesTable report={report} r={r} st={st} filter={filter} q={q} openSource={openSource} override={override} />
+            <LinesTable report={report} r={r} st={st} filter={filter} q={q} open={openLine} selected={pick?.kind === "line" ? pick.idx : null} override={override} />
           </div>
           <div className={tab === "checks" ? "" : s.hiddenScreen}>
             <h2 className={s.printTitle}>Consistency checks</h2>
@@ -174,6 +189,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       </div>
 
       {source && <SourcePanel source={source} report={report} onClose={() => setSource(null)} />}
+      {evidence && <EvidencePanel ev={evidence} onClose={() => setPick(null)} />}
     </div>
   );
 }
@@ -204,6 +220,7 @@ function OverrideMenu({ fid, current, hasOverride, onChange }: { fid: string; cu
   return (
     <select
       className={`${s.overrideSelect} noprint`}
+      onClick={(e) => e.stopPropagation()}
       value=""
       aria-label="Change status"
       onChange={(e) => {
@@ -244,7 +261,14 @@ function DocHead({ report, docRef }: { report: Report; docRef: string }) {
 function PageLink({ page, onClick }: { page: number | null; onClick: () => void }) {
   if (!page) return null;
   return (
-    <button className={`${s.pageLink} noprint-inline`} onClick={onClick} title="Show in source document">
+    <button
+      className={`${s.pageLink} noprint-inline`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      title="Show highlighted in the source documents"
+    >
       p.{page}
     </button>
   );
@@ -261,7 +285,7 @@ type CommonProps = {
   q: string;
   override: (fid: string, s: Status | null) => void;
 };
-type OpenSource = (docRef: string, page: number | null, quote: string | null, value: string, field: string) => void;
+type RowOpen = { open: (idx: number, focusRef?: string) => void; selected: number | null };
 
 function Empty() {
   return <div className={s.empty}>No findings match this filter.</div>;
@@ -269,12 +293,12 @@ function Empty() {
 
 // ── Data fields ──
 
-function FieldsTable({ report, r, st, filter, q, openSource, override }: CommonProps & { openSource: OpenSource }) {
+function FieldsTable({ report, r, st, filter, q, open, selected, override }: CommonProps & RowOpen) {
   const refs = report.docs.map((d) => d.ref);
   const rows = useMemo(
     () =>
       r.header_fields
-        .map((f, i) => ({ f, fid: `h${i + 1}` }))
+        .map((f, i) => ({ f, i, fid: `h${i + 1}` }))
         .filter(({ f, fid }) => (filter === "all" || st(fid, f.status) === filter) && matches(q, f.label, f.category, f.reasoning, ...f.values.map((v) => v.value))),
     [r, filter, q, st],
   );
@@ -295,10 +319,10 @@ function FieldsTable({ report, r, st, filter, q, openSource, override }: CommonP
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ f, fid }) => {
+        {rows.map(({ f, i, fid }) => {
           const status = st(fid, f.status);
           return (
-            <tr key={fid} className={s[`row_${status}`]}>
+            <tr key={fid} className={`${s[`row_${status}`]} ${s.clickRow} ${selected === i ? s.rowSelected : ""}`} onClick={() => open(i)} title="Show this field in all documents">
               <td className={s.stickyA}>
                 <StatusCell status={status} override={report.overrides[fid]} />
               </td>
@@ -314,7 +338,7 @@ function FieldsTable({ report, r, st, filter, q, openSource, override }: CommonP
                 return (
                   <td key={ref} className={!v.value ? s.absent : ""}>
                     <div className={s.value}>{v.value || "Not shown"}</div>
-                    <PageLink page={v.page} onClick={() => openSource(ref, v.page, v.source_text, v.value, f.label)} />
+                    <PageLink page={v.page} onClick={() => open(i, ref)} />
                   </td>
                 );
               })}
@@ -335,10 +359,10 @@ function FieldsTable({ report, r, st, filter, q, openSource, override }: CommonP
 
 // ── Line items ──
 
-function LinesTable({ report, r, st, filter, q, openSource, override }: CommonProps & { openSource: OpenSource }) {
+function LinesTable({ report, r, st, filter, q, open, selected, override }: CommonProps & RowOpen) {
   const refs = report.docs.map((d) => d.ref).filter((ref) => r.line_items.some((l) => l.cells.some((c) => c.doc_ref === ref)));
   const rows = r.line_items
-    .map((l, i) => ({ l, fid: `l${i + 1}` }))
+    .map((l, i) => ({ l, i, fid: `l${i + 1}` }))
     .filter(({ l, fid }) => (filter === "all" || st(fid, l.status) === filter) && matches(q, l.item_key, l.description, l.reasoning, ...l.cells.map((c) => c.hs_code)));
   if (!rows.length) return <Empty />;
   return (
@@ -357,10 +381,10 @@ function LinesTable({ report, r, st, filter, q, openSource, override }: CommonPr
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ l, fid }) => {
+        {rows.map(({ l, i, fid }) => {
           const status = st(fid, l.status);
           return (
-            <tr key={fid} className={s[`row_${status}`]}>
+            <tr key={fid} className={`${s[`row_${status}`]} ${s.clickRow} ${selected === i ? s.rowSelected : ""}`} onClick={() => open(i)} title="Show this item in all documents">
               <td className={s.stickyA}>
                 <StatusCell status={status} override={report.overrides[fid]} />
               </td>
@@ -378,7 +402,7 @@ function LinesTable({ report, r, st, filter, q, openSource, override }: CommonPr
                       {c.amount != null && <span className="muted"> · {c.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>}
                     </div>
                     {c.hs_code && <div className={s.sub}>HS {c.hs_code}</div>}
-                    <PageLink page={c.page} onClick={() => openSource(ref, c.page, c.description, `${c.quantity ?? ""} ${c.uom ?? ""}`, l.item_key)} />
+                    <PageLink page={c.page} onClick={() => open(i, ref)} />
                   </td>
                 );
               })}
@@ -476,4 +500,65 @@ function SourcePanel({ source, report, onClose }: { source: Source; report: Repo
       )}
     </aside>
   );
+}
+
+// ── Evidence (row click → every document, value highlighted) ──
+
+function buildEvidence(report: ReportDTO, pick: Pick, st: (fid: string, s: Status) => Status): Evidence | null {
+  const r = report.result;
+  const docByRef = new Map(report.docs.map((d) => [d.ref, d]));
+  const key = `${pick.kind}:${pick.idx}:${pick.focusRef ?? ""}:${pick.n}`;
+  if (pick.kind === "field") {
+    const f = r.header_fields[pick.idx];
+    if (!f) return null;
+    return {
+      key,
+      title: f.label,
+      subtitle: `${f.category} · h${pick.idx + 1} · ${f.values.filter((v) => v.value).length} documents`,
+      status: st(`h${pick.idx + 1}`, f.status),
+      reasoning: f.reasoning,
+      focusRef: pick.focusRef,
+      items: report.docs
+        .map((d) => ({ d, v: f.values.find((v) => v.doc_ref === d.ref) }))
+        .filter((x) => x.v)
+        .map(({ d, v }) => ({
+          doc: d,
+          value: v!.value,
+          page: v!.page,
+          quote: v!.source_text,
+          target: { label: f.label, value: v!.value, context: v!.source_text },
+        })),
+    };
+  }
+  const l = r.line_items[pick.idx];
+  if (!l) return null;
+  return {
+    key,
+    title: l.item_key,
+    subtitle: `Line item · l${pick.idx + 1} · ${l.cells.length} documents`,
+    status: st(`l${pick.idx + 1}`, l.status),
+    reasoning: l.reasoning,
+    focusRef: pick.focusRef,
+    items: l.cells
+      .filter((c) => docByRef.has(c.doc_ref))
+      .map((c) => {
+        const qty = [c.quantity, c.uom].filter((x) => x != null && x !== "").join(" ");
+        const amt = c.amount != null ? c.amount.toLocaleString("en-US", { minimumFractionDigits: 2 }) : null;
+        const desc = c.description || l.description;
+        return {
+          doc: docByRef.get(c.doc_ref)!,
+          value: desc,
+          sub: [qty && `Qty ${qty}`, amt && `Amount ${amt}`, c.hs_code && `HS ${c.hs_code}`, c.line_no != null && `Line ${c.line_no}`].filter(Boolean).join(" · "),
+          page: c.page,
+          quote: null,
+          target: {
+            label: `Line item ${l.item_key}`,
+            value: desc,
+            context: [l.item_key, c.hs_code && `HS ${c.hs_code}`, qty && `quantity ${qty}`, amt && `amount ${amt}`].filter(Boolean).join(", "),
+            // Item code only: HS codes repeat across rows and would light up every line.
+            extra: [l.item_key].filter((x) => x.replace(/[^a-z0-9]/gi, "").length >= 5),
+          },
+        };
+      }),
+  };
 }

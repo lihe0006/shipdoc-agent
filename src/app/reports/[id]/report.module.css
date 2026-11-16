@@ -524,3 +524,12 @@
 @media print {
   .clamp { display: block; -webkit-line-clamp: unset; }
 }
+
+/* Clickable rows → evidence panel */
+.clickRow {
+  cursor: pointer;
+}
+.table tbody tr.rowSelected td {
+  /* Opaque (sticky columns sit over scrolled content). */
+  background: #eef9f8;
+}
