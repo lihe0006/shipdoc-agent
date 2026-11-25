@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Shipment document check",
-  description: "Upload K1, CIPL, BL and Form E — the agent compares every field and flags mismatches.",
+  description: "Upload CIPL, BL and Form E — the agent compares every field and flags mismatches.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

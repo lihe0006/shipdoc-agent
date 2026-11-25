@@ -15,8 +15,8 @@ type UIMessage =
   | { id: string; role: "assistant"; parts: Part[]; done: boolean };
 
 const SHORTCUTS = [
-  { icon: Upload, title: "Check a shipment", sub: "Upload the K1, CIPL, BL and Form E — I'll compare every field", action: "upload" as const },
-  { icon: FileSearch, title: "What do you compare?", sub: "See the data fields and rules I check across documents", action: "What data fields do you compare across the K1, CIPL, BL and Form E, and how do you decide what is a mismatch?" },
+  { icon: Upload, title: "Check a shipment", sub: "Upload the CIPL, BL and Form E — I'll compare every field", action: "upload" as const },
+  { icon: FileSearch, title: "What do you compare?", sub: "See the data fields and rules I check across documents", action: "What data fields do you compare across the CIPL, BL and Form E, and how do you decide what is a mismatch?" },
   { icon: ShieldCheck, title: "Form E preference risks", sub: "What typically voids a Form E preferential duty claim", action: "Which differences between the Form E and the other documents typically put the preferential duty claim at risk?" },
 ];
 
@@ -218,7 +218,7 @@ export default function ChatPage() {
               </div>
               <h1 className={s.greet}>Hello 👋</h1>
               <p className={s.sub}>
-                I am your shipping document checking assistant. Upload one shipment&apos;s K1, CIPL, bill of lading and Form E — I&apos;ll read every
+                I am your shipping document checking assistant. Upload one shipment&apos;s CIPL, bill of lading and Form E — I&apos;ll read every
                 page, line up the common data fields and line items, and give you a results page with every mismatch and where it came from.
               </p>
               <div className={s.shortcuts}>
@@ -326,7 +326,7 @@ export default function ChatPage() {
             }}
           />
         </div>
-        <div className={s.disclaimer}>AI-generated findings — confirm against the original documents before submitting the K1.</div>
+        <div className={s.disclaimer}>AI-generated findings — confirm against the original documents before acting on them.</div>
       </div>
 
       {dragging && (

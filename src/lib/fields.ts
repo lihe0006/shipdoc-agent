@@ -1,7 +1,7 @@
 /**
  * Field catalog for Malaysian import shipment document checks.
  *
- * Sources: the box layout of Customs No.1 (K1, Pin.2015/Rev.2015), the
+ * Sources: the
  * ASEAN-China FTA Certificate of Origin (Form E), standard ocean bill of lading
  * (house and master) layouts, and typical commercial invoice / packing list
  * (CIPL) content. Each field lists where it appears on each document so the
@@ -13,7 +13,6 @@ export const DOC_TYPES = [
   "commercial_invoice",
   "packing_list",
   "bill_of_lading",
-  "k1",
   "form_e",
   "other",
 ] as const;
@@ -23,7 +22,6 @@ export const DOC_TYPE_LABEL: Record<DocType, string> = {
   commercial_invoice: "Commercial invoice",
   packing_list: "Packing list",
   bill_of_lading: "Bill of lading",
-  k1: "K1 customs declaration",
   form_e: "Form E (ACFTA CO)",
   other: "Other",
 };
@@ -32,7 +30,6 @@ export const DOC_TYPE_SHORT: Record<DocType, string> = {
   commercial_invoice: "CI",
   packing_list: "PL",
   bill_of_lading: "BL",
-  k1: "K1",
   form_e: "Form E",
   other: "Other",
 };
@@ -65,7 +62,6 @@ export const FIELDS: FieldDef[] = [
       commercial_invoice: "Seller / issuer letterhead",
       packing_list: "Issuer letterhead",
       bill_of_lading: "Shipper box",
-      k1: "Box 1 Consignor / Exporter",
       form_e: "Box 1 Products consigned from (exporter)",
     },
     rule:
@@ -79,7 +75,6 @@ export const FIELDS: FieldDef[] = [
       commercial_invoice: "Bill to / Ship to",
       packing_list: "Ship to",
       bill_of_lading: "Consignee box",
-      k1: "Box 2 Consignee / Importer",
       form_e: "Box 2 Products consigned to",
     },
     rule:
@@ -92,16 +87,6 @@ export const FIELDS: FieldDef[] = [
     locations: { bill_of_lading: "Notify party box" },
     rule: "Informational. 'Same as consignee' is acceptable.",
   },
-  {
-    key: "declarant_agent",
-    label: "Forwarding / customs agent",
-    category: "Parties",
-    locations: {
-      k1: "Box 3 Authorized agent",
-      bill_of_lading: "Delivery agent / party to contact for cargo release",
-    },
-    rule: "Informational; different agents on K1 and BL are common.",
-  },
 
   // ── References ──
   {
@@ -112,7 +97,6 @@ export const FIELDS: FieldDef[] = [
       commercial_invoice: "Invoice no. (one per invoice)",
       packing_list: "Packing list / order no.",
       bill_of_lading: "Description area, often 'PO NO' or 'INV NO'",
-      k1: "Box 35 Invoice no.",
       form_e: "Box 10 Number and date of invoices",
     },
     rule:
@@ -134,20 +118,9 @@ export const FIELDS: FieldDef[] = [
     category: "References",
     locations: {
       bill_of_lading: "B/L No. (house and/or master)",
-      k1: "Box 20 Bill of lading / consignment note no.",
     },
     rule:
-      "K1 box 20 should quote the BL the importer receives (usually the House BL). A House BL's 'shipper's reference' often quotes the Master BL number; link them rather than flagging.",
-  },
-  {
-    key: "form_e_reference",
-    label: "Form E reference no.",
-    category: "References",
-    locations: {
-      form_e: "Reference No. (top right)",
-      k1: "Box 21 Special treatment and/or preferential claim declaration text",
-    },
-    rule: "Must match exactly when preferential duty is claimed on K1.",
+      "House and Master BL numbers differ by design. A House BL's 'shipper's reference' often quotes the Master BL number; link them rather than flagging.",
   },
   {
     key: "form_e_issue_date",
@@ -155,9 +128,8 @@ export const FIELDS: FieldDef[] = [
     category: "References",
     locations: {
       form_e: "Box 11 place and date of declaration / box 12 certification date",
-      k1: "Preferential claim text 'date of issue'",
     },
-    rule: "Must be the same date. Form E should be issued no later than shipment (or marked 'Issued retroactively').",
+    rule: "Form E should be issued no later than the departure date (or marked 'Issued retroactively').",
   },
 
   // ── Transport ──
@@ -167,7 +139,6 @@ export const FIELDS: FieldDef[] = [
     category: "Transport",
     locations: {
       bill_of_lading: "Ocean vessel / voyage no.",
-      k1: "Box 6 Name of vessel / flight",
       form_e: "Box 3 Vessel's name / aircraft",
     },
     rule:
@@ -184,19 +155,11 @@ export const FIELDS: FieldDef[] = [
     rule: "Should be the same date. A difference of more than a few days usually means the vessel changed.",
   },
   {
-    key: "arrival_date",
-    label: "Import / arrival date",
-    category: "Transport",
-    locations: { k1: "Box 5 Date of import" },
-    rule: "Must be after the departure date.",
-  },
-  {
     key: "port_of_loading",
     label: "Port of loading",
     category: "Transport",
     locations: {
       bill_of_lading: "Port of loading",
-      k1: "Box 8 Port / place of loading",
       form_e: "Box 3 route 'From …'",
     },
     rule: "Same port (UN/LOCODE or name). Place of receipt differing from port of loading is not a mismatch.",
@@ -207,7 +170,6 @@ export const FIELDS: FieldDef[] = [
     category: "Transport",
     locations: {
       bill_of_lading: "Port of discharge",
-      k1: "Box 7 Port / place of import",
       form_e: "Box 3 Port of discharge",
     },
     rule: "Same Malaysian port. 'Port Klang' vs 'MYPKG' vs 'Port Klang (P)' are the same.",
@@ -225,7 +187,6 @@ export const FIELDS: FieldDef[] = [
     category: "Transport",
     locations: {
       bill_of_lading: "Freight prepaid / collect",
-      k1: "Box 25 Freight amount",
       commercial_invoice: "Implied by incoterm",
     },
     rule:
@@ -239,7 +200,6 @@ export const FIELDS: FieldDef[] = [
     category: "Cargo",
     locations: {
       bill_of_lading: "Marks & numbers / container no. seal no.",
-      k1: "Box 29 Container no.",
     },
     rule: "Container numbers must match exactly (4 letters + 7 digits).",
   },
@@ -249,7 +209,6 @@ export const FIELDS: FieldDef[] = [
     category: "Cargo",
     locations: {
       bill_of_lading: "Marks & numbers",
-      k1: "Box 29 Marks and nos.",
       form_e: "Box 6 Marks and numbers on packages",
       packing_list: "Shipping marks",
     },
@@ -261,7 +220,6 @@ export const FIELDS: FieldDef[] = [
     category: "Cargo",
     locations: {
       bill_of_lading: "No. of packages + total in words",
-      k1: "Box 30/31 Number and type of packages",
       packing_list: "Total cartons / pallets",
       commercial_invoice: "Total cartons",
       form_e: "Box 7 number and type of packages",
@@ -275,12 +233,11 @@ export const FIELDS: FieldDef[] = [
     category: "Cargo",
     locations: {
       bill_of_lading: "Gross weight",
-      k1: "Box 26 Gross weight",
       packing_list: "Total gross weight",
       commercial_invoice: "Gross weight",
     },
     rule:
-      "BL and K1 must match exactly. CIPL carton-level weight can be lower than the palletised BL weight; treat as minor with an explanation, unless the CIPL total is higher than the BL.",
+      "House and Master BL must match exactly. CIPL carton-level weight can be lower than the palletised BL weight; treat as minor with an explanation, unless the CIPL total is higher than the BL.",
   },
   {
     key: "measurement_cbm",
@@ -288,10 +245,9 @@ export const FIELDS: FieldDef[] = [
     category: "Cargo",
     locations: {
       bill_of_lading: "Measurement m³",
-      k1: "Box 27 Measurement",
       packing_list: "Total volume",
     },
-    rule: "BL and K1 must match. Packing list carton CBM below palletised CBM is minor.",
+    rule: "House and Master BL must match. Packing list carton CBM below palletised CBM is minor.",
   },
   {
     key: "goods_description",
@@ -300,7 +256,6 @@ export const FIELDS: FieldDef[] = [
     locations: {
       commercial_invoice: "Item descriptions",
       bill_of_lading: "Description of goods",
-      k1: "Box 32 Description of goods",
       form_e: "Box 7 description",
     },
     rule: "Same goods in substance; wording and level of detail can differ.",
@@ -313,9 +268,8 @@ export const FIELDS: FieldDef[] = [
       commercial_invoice: "Sum of line quantities",
       packing_list: "Sum of shipped quantities",
       form_e: "Sum of box 9 quantities",
-      k1: "Sum of box 37 quantities (often in KGM, not pieces)",
     },
-    rule: "Compare in the same unit only. K1 tariff-unit quantities (KGM) cannot be compared with pieces.",
+    rule: "Compare in the same unit only. Different units (pieces vs sets vs kg) cannot be compared directly.",
   },
 
   // ── Commercial ──
@@ -325,10 +279,9 @@ export const FIELDS: FieldDef[] = [
     category: "Commercial",
     locations: {
       commercial_invoice: "Terms of delivery / incoterm",
-      k1: "Value basis (FOB box 28 / CIF box 24)",
     },
     rule:
-      "K1 always declares FOB and CIF values. If the invoice is EXW, check that inland/origin charges were handled; EXW invoice vs FOB declaration is a minor difference to review, not a hard mismatch.",
+      "Should be consistent with the House BL freight terms (EXW/FOB → collect; CFR/CIF → prepaid). If the Form E shows an FOB value under an EXW invoice, treat the difference as minor to review.",
   },
   {
     key: "currency",
@@ -336,7 +289,6 @@ export const FIELDS: FieldDef[] = [
     category: "Commercial",
     locations: {
       commercial_invoice: "Currency",
-      k1: "Invoice value currency + exchange rate",
     },
     rule: "Must match.",
   },
@@ -346,18 +298,10 @@ export const FIELDS: FieldDef[] = [
     category: "Commercial",
     locations: {
       commercial_invoice: "Invoice total (sum across all invoices)",
-      k1: "Invoice value (FOB) in foreign currency",
       form_e: "Box 9 FOB value (only when RVC criterion applies)",
     },
     rule:
-      "K1 foreign-currency invoice value must equal the sum of all invoice totals exactly. Rounding under 0.01 is a match.",
-  },
-  {
-    key: "payment_country",
-    label: "Country of payment / export",
-    category: "Commercial",
-    locations: { k1: "Box 17 Payment for goods to be made to (country)" },
-    rule: "Should be the country of the invoicing party.",
+      "Line amounts must add up to each invoice total. Form E FOB values (when shown) should agree with the invoices. Rounding under 0.01 is a match.",
   },
 
   // ── Origin & tariff ──
@@ -368,7 +312,6 @@ export const FIELDS: FieldDef[] = [
     locations: {
       commercial_invoice: "Country of origin per line",
       packing_list: "COO per line",
-      k1: "Box 36 Country of origin code",
       form_e: "Box 11 'produced in' / Issued in",
     },
     rule: "Must be the same country (CN = China = People's Republic of China).",
@@ -380,11 +323,10 @@ export const FIELDS: FieldDef[] = [
     locations: {
       commercial_invoice: "HTS / HS code per line",
       bill_of_lading: "HS code in description",
-      k1: "Box 33 Tariff code (Malaysian 10-digit)",
       form_e: "Box 7 HS number (6-digit)",
     },
     rule:
-      "Compare at the 6-digit level (dots and spaces ignored). K1 adds national digits. A different 6-digit heading is a mismatch and may void the Form E preference.",
+      "Compare at the 6-digit level (dots and spaces ignored); national digits beyond 6 can differ. A different 6-digit heading is a mismatch and may void the Form E preference.",
   },
   {
     key: "origin_criterion",

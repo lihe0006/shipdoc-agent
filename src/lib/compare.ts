@@ -5,21 +5,21 @@ import { DOC_TYPE_LABEL, fieldCatalogText, type DocType } from "./fields";
 import { ComparisonResult } from "./schemas";
 import { store, type DocRef, type Report, type Session } from "./store";
 
-const COMPARE_SYSTEM = `You are a senior Malaysian customs documentation checker. You receive data extracted from one shipment's documents (commercial invoice, packing list, bills of lading, K1 customs declaration, Form E certificate of origin). Compare every common data field across documents and judge each difference like an experienced reviewer would.
+const COMPARE_SYSTEM = `You are a senior Malaysian customs documentation checker. You receive data extracted from one shipment's documents (commercial invoice, packing list, bills of lading, Form E certificate of origin). Compare every common data field across documents and judge each difference like an experienced reviewer would.
 
 Statuses:
 - match: same in substance (formatting, case, punctuation, abbreviations, line wraps, unit notation and equivalent names are ignored).
-- minor: differs but is explainable or low-risk (typo, O/0 confusion, missing voyage number, carton vs pallet weight, EXW invoice vs FOB declaration). Explain why.
+- minor: differs but is explainable or low-risk (typo, O/0 confusion, missing voyage number, carton vs pallet weight, EXW invoice vs FOB value on Form E). Explain why.
 - mismatch: a real discrepancy that could cause a customs query, loss of Form E preference, or a wrong declaration (different vessel, value, quantity, HS heading, party, container).
 - missing: the field is expected on a document that should carry it (per the catalog) but is absent or illegible there.
 - single_source: only one document carries this field; shown for completeness.
 
 How to judge:
-- Decide the source of truth per field yourself: commercial documents (invoice/packing list) usually lead for goods, value and quantity; the House BL leads for transport; the K1 must agree with both; the Form E must agree with the shipment it certifies. Say which document you relied on when it matters.
-- Aggregate same-type documents when the shipment has several (e.g. three invoices → compare their combined total and combined line items with the K1 and Form E).
-- Compare like with like (pallets vs cartons, KGM vs pieces). Do not call different packing levels or tariff units a mismatch.
-- Do arithmetic: sum line amounts vs invoice totals, sum invoice totals vs K1 invoice value, K1 FOB in RM vs invoice value × exchange rate, carton counts per invoice vs Form E total, weights and CBM across documents, number of line items per document.
-- Check dates for logic: Form E issue vs departure, departure vs K1 import date.
+- Decide the source of truth per field yourself: commercial documents (invoice/packing list) usually lead for goods, value and quantity; the House BL leads for transport; the Form E must agree with the shipment it certifies. Say which document you relied on when it matters.
+- Aggregate same-type documents when the shipment has several (e.g. three invoices → compare their combined total and combined line items with the packing list, BL and Form E).
+- Compare like with like (pallets vs cartons, kg vs pieces). Do not call different packing levels or tariff units a mismatch.
+- Do arithmetic: sum line amounts vs invoice totals, invoice quantities vs packing list quantities, carton counts per invoice vs Form E total, weights and CBM across documents, number of line items per document.
+- Check dates for logic: invoice date vs departure, Form E issue vs departure.
 - Treat Master and House BL as two documents of different levels; differences that are normal between them (shipper, freight terms, BL number) are minor or match with an explanation, but quantity/weight/CBM/container must agree.
 
 Output rules:
@@ -39,6 +39,8 @@ export function buildDocRefs(session: Session): DocRef[] {
     const f = store.files.get(fileId);
     if (!f?.extraction) continue;
     for (const [docIndex, d] of f.extraction.documents.entries()) {
+      // Out-of-scope documents (e.g. a K1) are extracted with no data; leave them out.
+      if (d.doc_type === "other" && !d.fields.length && !d.line_items.length) continue;
       refs.push({
         ref: `D${refs.length + 1}`,
         fileId: f.id,
@@ -76,7 +78,7 @@ export async function compareSession(session: Session, focusNotes?: string): Pro
   });
 
   const presentTypes = new Set(refs.map((r) => r.docType));
-  const expected: DocType[] = ["commercial_invoice", "packing_list", "bill_of_lading", "k1", "form_e"];
+  const expected: DocType[] = ["commercial_invoice", "packing_list", "bill_of_lading", "form_e"];
   const absent = expected.filter((t) => !presentTypes.has(t)).map((t) => DOC_TYPE_LABEL[t]);
 
   const stream = client().beta.messages.stream({

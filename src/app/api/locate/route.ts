@@ -33,7 +33,7 @@ type Box = { x0: number; y0: number; x1: number; y1: number };
 const g = globalThis as unknown as { __locateCache?: Map<string, Box[]> };
 const cache = (g.__locateCache ??= new Map());
 
-const SYSTEM = `You locate text on images of shipping-document pages (invoices, packing lists, bills of lading, Malaysian K1 customs declarations, Form E certificates). Pages may be scanned, skewed or handwritten.
+const SYSTEM = `You locate text on images of shipping-document pages (invoices, packing lists, bills of lading, Form E certificates). Pages may be scanned, skewed or handwritten.
 
 You are given one page image, its exact pixel size, and a value that was transcribed from this page. Return tight bounding boxes, in pixel coordinates of this image (origin top-left, x to the right, y down), around where that value is written.
 - If the value spans several lines (an address, a description), return one box per line.

@@ -1,7 +1,7 @@
 # Shipment document check (POC)
 
 An agent-first web app: the user chats with an assistant, uploads one shipment's
-**K1, CIPL, bill(s) of lading and Form E**, and the agent reads every page,
+**CIPL, bill(s) of lading and Form E**, and the agent reads every page,
 lines up the common data fields and line items, judges each difference and
 publishes a **results page** with every mismatch linked back to its source page.
 

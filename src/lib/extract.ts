@@ -12,22 +12,20 @@ Document types you will see:
 - commercial_invoice: seller's invoice (CI). A "CIPL" file holds commercial invoices AND packing lists.
 - packing_list: packing list / packing slip (PL).
 - bill_of_lading: ocean bill of lading. Distinguish "House BL" (issued by the forwarder/NVOCC to the seller, names the real seller as shipper) from "Master BL" (issued by the carrier, shipper is usually the origin forwarder). Put this in doc_subtype, plus "Draft" if marked draft.
-- k1: Malaysian Customs No.1 import declaration (Kastam No.1). Multi-page; header boxes repeat on every page, line items continue across pages.
 - form_e: ASEAN-China FTA Certificate of Origin (Form E). Multi-page; header boxes are filled on page 1 only and items continue across pages.
-- other: anything else.
+- other: anything else. Malaysian K1 customs declarations (Kastam No.1) are out of scope: return a K1 as doc_type "other" with doc_subtype "K1 (not compared)", its pages, and NO fields or line items.
 
 Grouping rules:
 - One uploaded file can contain several documents. Return each logical document separately with its page numbers.
 - Group ALL commercial invoices in the file into ONE commercial_invoice document, and ALL packing lists into ONE packing_list document. When a field differs per invoice (invoice number, gross weight, cartons, total), give every invoice's value and the combined total in "value", e.g. "SO1 USD 648.00; SO2 USD 3,662.28; total USD 4,310.28". Tag each line item with invoice_ref.
-- Pages that only repeat a header (e.g. K1 continuation pages) do not create a new document.
+- Pages that only repeat a header (continuation pages) do not create a new document.
 
 Field extraction rules:
-- Use these catalog keys wherever the field exists on the document. Use key "other" for important document-specific fields not in the catalog (e.g. K1 importer code, exchange rate, duty amounts, BL number of originals, Form E third-party invoicing tick box, pallet details).
+- Use these catalog keys wherever the field exists on the document. Use key "other" for important document-specific fields not in the catalog (e.g. BL number of originals, Form E third-party invoicing tick box, pallet details).
 - Transcribe values exactly as printed, including typos and odd characters (O vs 0). Do not correct or infer — the point is to find discrepancies. If a value is illegible write "[illegible]" and note it in quality_notes.
 - "page" is the 1-based page of the uploaded file where the value appears. "source_text" is a short verbatim snippet (≤ 120 chars) the reviewer can find on that page.
 - For Form E record whether box 13 "Third Party Invoicing" is ticked and who the third-party operator is.
-- For K1, also extract the total invoice value in foreign currency, FOB/CIF in RM, exchange rate, and the preferential claim text referencing the Form E.
-- Extract EVERY line item on every page. Quantities, prices, amounts and weights are numbers (no currency symbols or thousands separators). Keep the document's own unit of measure (K1 often uses KGM tariff units).
+- Extract EVERY line item on every page. Quantities, prices, amounts and weights are numbers (no currency symbols or thousands separators). Keep the document's own unit of measure.
 - Note DRAFT / COPY watermarks, stamps, handwriting and unreadable areas in quality_notes.
 
 Catalog:

@@ -16,7 +16,8 @@ export type AgentEvent =
   | { type: "error"; message: string }
   | { type: "done" };
 
-const SYSTEM = `You are the shipment document checking assistant for a Malaysian freight forwarder. Users upload one shipment's documents — commercial invoice and packing list (CIPL), bill(s) of lading, K1 customs declaration and Form E certificate of origin — and you check that they agree with each other before the K1 is submitted.
+const SYSTEM = `You are the shipment document checking assistant for a Malaysian freight forwarder. Users upload one shipment's documents — commercial invoice and packing list (CIPL), bill(s) of lading and Form E certificate of origin — and you check that they agree with each other.
+K1 customs declarations are not part of this check. If the user uploads a K1, it is skipped automatically; tell them in one line that K1 is not compared.
 
 How you work:
 - When the user uploads files, call extract_documents with all new file ids, then call compare_documents. Don't ask for permission first; the upload is the request. If fewer than two documents could be read, say what is missing instead of comparing.
